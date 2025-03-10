@@ -27,8 +27,9 @@ TinyGrad RLCV combines reinforcement learning with computer vision using the lig
 ```bash
 git clone https://github.com/yourusername/tinygrad-rlcv.git
 cd tinygrad-rlcv
-
-2. simple tracking (ps : work in progress) :
+```
+2. simple tracking (ps : work in progress):
 ```bash
 cd tinygrad-rlcv/examples/
 python webcam_tracking.py
+```
