@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TinyGrad RLCV Flowchart</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .mermaid {
+            margin: 30px 0;
+        }
+        .description {
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TinyGrad RLCV System Architecture</h1>
+        
+        <div class="description">
+            <p>This document visualizes the architecture and data flow of the TinyGrad Reinforcement Learning Computer Vision (RLCV) system. The system is designed to be lightweight, modular, and efficient for deployment on mobile CPUs and ARM-based devices.</p>
+        </div>
+        
+        <h2>System Overview</h2>
+        <div class="mermaid">
+            graph TD
+                A[Input Image/Video] --> B[Vision Module]
+                B --> C[Feature Extraction]
+                C --> D[State Representation]
+                D --> E[RL Agent]
+                E --> F[Policy]
+                F --> G[Action Selection]
+                G --> H[Environment]
+                H --> I[Reward Calculation]
+                I --> J[Memory]
+                J --> E
+                H --> A
+        </div>
+        
+        <h2>Module Relationships</h2>
+        <div class="mermaid">
+            classDiagram
+                class Environment {
+                    +reset()
+                    +step(action)
+                    +render()
+                }
+                class VisionEnvironment {
+                    +preprocessor
+                    +get_observation()
+                    +process_observation()
+                }
+                class ObjectTrackingEnv {
+                    +video_source
+                    +target_object
+                    +current_frame
+                }
+                class WebcamTrackingEnv {
+                    +camera_id
+                    +bbox
+                    +_setup_camera()
+                }
+                class Agent {
+                    +state_shape
+                    +action_space
+                    +build_model()
+                    +act(state)
+                    +train(state, action, reward, next_state, done)
+                }
+                class Policy {
+                    +select_action(q_values)
+                }
+                class Memory {
+                    +add(state, action, reward, next_state, done)
+                    +sample(batch_size)
+                }
+                class Model {
+                    +build()
+                    +forward(x)
+                    +save(path)
+                    +load(path)
+                }
+                
+                Environment <|-- VisionEnvironment
+                VisionEnvironment <|-- ObjectTrackingEnv
+                ObjectTrackingEnv <|-- WebcamTrackingEnv
+                VisionEnvironment <|-- SimpleDetectionEnv
+                Agent --> Policy
+                Agent --> Model
+                Agent --> Memory
+        </div>
+        
+        <h2>Training Process</h2>
+        <div class="mermaid">
+            sequenceDiagram
+                participant E as Environment
+                participant A as Agent
+                participant M as Memory
+                participant P as Policy
+                
+                E->>A: Initial State
+                loop Training
+                    A->>P: Get Q-values
+                    P->>A: Select Action
+                    A->>E: Take Action
+                    E->>A: Next State, Reward, Done
+                    A->>M: Store Experience
+                    M->>A: Sample Batch
+                    A->>A: Update Model
+                end
+        </div>
+        
+        <h2>Webcam Tracking Process</h2>
+        <div class="mermaid">
+            sequenceDiagram
+                participant W as Webcam
+                participant E as WebcamTrackingEnv
+                participant A as DQNAgent
+                participant R as Renderer
+                
+                W->>E: Capture Frame
+                E->>E: Process Frame
+                E->>A: Current State
+                A->>A: Select Action
+                A->>E: Move Bounding Box
+                E->>E: Calculate Reward
+                E->>R: Render Frame with Metrics
+                E->>E: Store Experience
+                Note over E,A: Repeat for each frame
+        </div>
+        
+        <h2>Deployment Architecture</h2>
+        <div class="mermaid">
+            graph LR
+                A[Input Device] --> B[Preprocessing]
+                B --> C[TinyGrad Model]
+                C --> D[Policy]
+                D --> E[Action]
+                
+                subgraph Mobile Device
+                    B
+                    C
+                    D
+                end
+        </div>
+        
+        <script>
+            mermaid.initialize({
+                startOnLoad: true,
+                theme: 'default',
+                securityLevel: 'loose',
+                flowchart: { useMaxWidth: false }
+            });
+        </script>
+    </div>
+</body>
+</html>
