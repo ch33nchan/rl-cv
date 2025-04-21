@@ -113,16 +113,38 @@ class WebcamTrackingEnv(ObjectTrackingEnv):
         if self.color_filter is None:
             return frame
             
-        # Convert RGB to HSV
+        # Convert to HSV for better color filtering
         hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
-        rgb = np.uint8([[self.color_filter]])
-        hsv_color = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
-        h, s, v = hsv_color[0][0]
         
-        # Create mask with safe HSV ranges
-        lower = np.array([max(0, h - 10), max(0, s - 50), max(0, v - 50)])
-        upper = np.array([min(180, h + 10), min(255, s + 50), min(255, v + 50)])
-        mask = cv2.inRange(hsv, lower, upper)
+        # Define color ranges for each predefined color
+        if self.color_filter == (255, 0, 0):  # Red
+            lower = np.array([0, 100, 100])
+            upper = np.array([10, 255, 255])
+            mask1 = cv2.inRange(hsv, lower, upper)
+            lower = np.array([160, 100, 100])
+            upper = np.array([180, 255, 255])
+            mask2 = cv2.inRange(hsv, lower, upper)
+            mask = mask1 + mask2
+        elif self.color_filter == (0, 255, 0):  # Green
+            lower = np.array([35, 100, 100])
+            upper = np.array([85, 255, 255])
+            mask = cv2.inRange(hsv, lower, upper)
+        elif self.color_filter == (0, 0, 255):  # Blue
+            lower = np.array([100, 100, 100])
+            upper = np.array([140, 255, 255])
+            mask = cv2.inRange(hsv, lower, upper)
+        elif self.color_filter == (255, 255, 0):  # Yellow
+            lower = np.array([20, 100, 100])
+            upper = np.array([30, 255, 255])
+            mask = cv2.inRange(hsv, lower, upper)
+        elif self.color_filter == (255, 0, 255):  # Magenta
+            lower = np.array([140, 100, 100])
+            upper = np.array([160, 255, 255])
+            mask = cv2.inRange(hsv, lower, upper)
+        else:  # Default case
+            lower = np.array([0, 100, 100])
+            upper = np.array([180, 255, 255])
+            mask = cv2.inRange(hsv, lower, upper)
         
         # Apply mask to frame
         result = cv2.bitwise_and(frame, frame, mask=mask)
