@@ -29,7 +29,58 @@ class WebcamTrackingEnv(ObjectTrackingEnv):
         self.color_filter = None
         self.filter_threshold = 30
         self.current_frame = 0
+        # Add color adjustment parameters
+        self.hue_range = 10
+        self.saturation_range = 50
+        self.value_range = 50
+        self.create_trackbars()
+
+    def create_trackbars(self):
+        """Create trackbars for color adjustment"""
+        cv2.namedWindow('Color Adjustments')
+        cv2.createTrackbar('Hue Range', 'Color Adjustments', self.hue_range, 30, lambda x: setattr(self, 'hue_range', x))
+        cv2.createTrackbar('Saturation Range', 'Color Adjustments', self.saturation_range, 100, lambda x: setattr(self, 'saturation_range', x))
+        cv2.createTrackbar('Value Range', 'Color Adjustments', self.value_range, 100, lambda x: setattr(self, 'value_range', x))
+
+    def apply_color_filter(self, frame):
+        """Apply color filter to frame with adjustable ranges"""
+        if self.color_filter is None:
+            return frame
+            
+        hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
         
+        # Color ranges with adjustable parameters
+        if self.color_filter == (255, 0, 0):  # Red
+            lower1 = np.array([0, max(0, 50-self.saturation_range), max(0, 50-self.value_range)])
+            upper1 = np.array([self.hue_range, min(255, 255+self.saturation_range), min(255, 255+self.value_range)])
+            lower2 = np.array([180-self.hue_range, max(0, 50-self.saturation_range), max(0, 50-self.value_range)])
+            upper2 = np.array([180, min(255, 255+self.saturation_range), min(255, 255+self.value_range)])
+            mask = cv2.inRange(hsv, lower1, upper1) + cv2.inRange(hsv, lower2, upper2)
+        elif self.color_filter == (0, 255, 0):  # Green
+            hue_center = 60
+            lower = np.array([max(0, hue_center-self.hue_range), max(0, 50-self.saturation_range), max(0, 50-self.value_range)])
+            upper = np.array([min(180, hue_center+self.hue_range), min(255, 255+self.saturation_range), min(255, 255+self.value_range)])
+            mask = cv2.inRange(hsv, lower, upper)
+        elif self.color_filter == (0, 0, 255):  # Blue
+            hue_center = 120
+            lower = np.array([max(0, hue_center-self.hue_range), max(0, 50-self.saturation_range), max(0, 50-self.value_range)])
+            upper = np.array([min(180, hue_center+self.hue_range), min(255, 255+self.saturation_range), min(255, 255+self.value_range)])
+            mask = cv2.inRange(hsv, lower, upper)
+        elif self.color_filter == (255, 255, 0):  # Yellow
+            hue_center = 30
+            lower = np.array([max(0, hue_center-self.hue_range), max(0, 50-self.saturation_range), max(0, 50-self.value_range)])
+            upper = np.array([min(180, hue_center+self.hue_range), min(255, 255+self.saturation_range), min(255, 255+self.value_range)])
+            mask = cv2.inRange(hsv, lower, upper)
+        elif self.color_filter == (255, 0, 255):  # Magenta
+            hue_center = 150
+            lower = np.array([max(0, hue_center-self.hue_range), max(0, 50-self.saturation_range), max(0, 50-self.value_range)])
+            upper = np.array([min(180, hue_center+self.hue_range), min(255, 255+self.saturation_range), min(255, 255+self.value_range)])
+            mask = cv2.inRange(hsv, lower, upper)
+        
+        # Apply mask and enhance result
+        result = cv2.bitwise_and(frame, frame, mask=mask)
+        return result
+    
     def reset(self):
         if self.cap is None:
             self.cap = cv2.VideoCapture(self.camera_id)
