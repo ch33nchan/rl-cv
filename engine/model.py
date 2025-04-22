@@ -3,12 +3,16 @@ import numpy as np
 import sys
 import os
 
+# Adjust path if tinygrad is not installed globally or in the parent directory
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tinygrad"))
-from tinygrad.tensor import Tensor
-from tinygrad.nn import Linear, Conv2d
-from tinygrad.nn.optim import Adam
 
-from .tinygrad_utils import to_tensor, to_numpy, create_lightweight_conv, create_lightweight_linear
+try:
+    from tinygrad.tensor import Tensor
+    from tinygrad.nn.optim import Adam
+    from tinygrad.nn.state import load_state_dict, get_parameters
+except ImportError:
+    print("Error: Tinygrad not found. Make sure it's installed or the path is correct.")
+    sys.exit(1)
 
 class BaseModel:
 
@@ -209,3 +213,97 @@ class RLCVModel:
         x = self.output_layer(x)
         
         return x
+
+
+class ReasoningModel:
+    """
+    Base class for Visual/Video Language Models focused on reasoning,
+    built on TinyGrad.
+    """
+    def __init__(self, config=None):
+        self.config = config or {}
+        self.model_components = {} # Dictionary to hold parts like vision encoder, language model, etc.
+        self.optimizer = None
+        # TODO: Define expected config parameters (e.g., base model name, embed_dim)
+
+    def build(self):
+        """
+        Construct the model components based on the config.
+        This might involve loading parts of a pre-trained model.
+        """
+        raise NotImplementedError("Subclasses must implement the build method")
+
+    def setup_optimizer(self, learning_rate=1e-4):
+        """Sets up the Adam optimizer for trainable parameters."""
+        if not self.model_components:
+            raise ValueError("Model must be built before setting up optimizer")
+
+        trainable_params = []
+        for component in self.model_components.values():
+             # Assuming components might be simple functions or non-parameterized objects
+             if hasattr(component, 'parameters'):
+                 trainable_params.extend(get_parameters(component))
+             elif isinstance(component, Tensor) and component.requires_grad:
+                 trainable_params.append(component)
+
+        # Filter out duplicates if parameters are shared across components
+        unique_params = list({id(p): p for p in trainable_params}.values())
+
+        if not unique_params:
+             print("Warning: No trainable parameters found for the optimizer.")
+             self.optimizer = None
+        else:
+             self.optimizer = Adam(unique_params, lr=learning_rate)
+        print(f"Optimizer set up for {len(unique_params)} parameters.")
+
+
+    def forward(self, *args, **kwargs):
+        """
+        Defines the forward pass of the model.
+        Inputs might include image tensors, text tokens, etc.
+        """
+        raise NotImplementedError("Subclasses must implement the forward method")
+
+    def get_trainable_parameters(self):
+        """Helper to get all trainable parameters from components."""
+        params = []
+        for component in self.model_components.values():
+            if hasattr(component, 'parameters'): # Check if component has tinygrad parameters
+                 params.extend(get_parameters(component))
+            elif isinstance(component, Tensor) and component.requires_grad:
+                 params.append(component) # Handle standalone trainable tensors
+        # Return unique parameters
+        return list({id(p): p for p in params}.values())
+
+
+    def load_base_weights(self, path):
+        """Loads weights from a pre-trained base model file."""
+        # This will need careful implementation based on how base models are stored
+        # and how they map to your model_components structure.
+        print(f"Loading base weights from {path} (Implementation needed)")
+        # Example: load_state_dict(self.model_components['language_model'], safe_load(path))
+        pass
+
+    def save_weights(self, path):
+        """Saves the current model weights."""
+        # Implementation needed using tinygrad.nn.state.safe_save
+        pass
+
+    # Add other necessary methods like generate (for text output), train_step, etc.
+
+# Example of a specific implementation (highly simplified)
+class SimpleVLM(ReasoningModel):
+    def build(self):
+        # Placeholder: In reality, load/define actual TinyGrad layers
+        print("Building SimpleVLM...")
+        # These would be actual tinygrad modules (Linear, Conv2d, etc.) or loaded models
+        self.model_components['vision_encoder'] = lambda x: x # Dummy vision encoder
+        self.model_components['language_model'] = lambda x: x # Dummy language model
+        print("SimpleVLM built.")
+
+    def forward(self, image_input: Tensor, text_input: Tensor):
+        print("SimpleVLM forward pass...")
+        vision_features = self.model_components['vision_encoder'](image_input)
+        # Combine features and process through language model (highly simplified)
+        output = self.model_components['language_model'](text_input + vision_features.mean()) # Dummy combination
+        return output
